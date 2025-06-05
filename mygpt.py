@@ -4,7 +4,16 @@ from os import get_terminal_size,system,path,chdir, listdir
 from sty import fg, bg, ef, rs 
 from sys import argv
 from datetime import datetime
+import platform
 
+def cls():
+	os_name=platform.system().lower()
+	if os_name:
+		system("cls" if "windows" in os_name else "clear")
+	else:
+		system("clear")
+#clear screen at the start
+cls()
 class Gpt:
 	# some class variables
 	chrcnt = get_terminal_size(0)[0]
@@ -51,7 +60,7 @@ class Gpt:
 	def save(self,filename):
 		sdir=path.dirname(filename)
 		name=path.basename(filename)
-		chdir(sdir if path.exists(sdir) else "/sdcard")
+		chdir(sdir if path.exists(sdir) else path.dirname(argv[0]))
 		with open(f"{name[0:name.index(".")]}.txt","a") as file:
 			file.write("\n\n"+self.timefmt()+"\n")
 			file.write(f"{self.Histstr}")
@@ -66,13 +75,16 @@ def SelectModel():
 		my_list = [x for x in mdlst if "gguf" in x]
 		dmd=[directory,my_list] if my_list else my_list
 		if dmd:
-			prompt=input(f"Models {dmd[1]} found in {dmd[0]}\n\nEnter 1-{len(dmd[1])} to select a model: ")
-			try:
-				ind=int(prompt)
-				return f"{dmd[0]}/{dmd[1][ind-1]}"
-			except Exception as e:
-				print(f'Invalid input "{prompt}"')
-				exit()
+			if len(dmd[1])>1:
+				prompt=input(f'Models {dmd[1]} found in "{dmd[0]}"\n\nEnter 1-{len(dmd[1])} to select a model: ')
+				try:
+					ind=int(prompt)
+					return f"{dmd[0]}/{dmd[1][ind-1]}"
+				except:
+					print(f'Invalid input "{prompt}"')
+					exit()
+			else:
+				return f"{dmd[0]}/{dmd[1][0]}"
 		else:
 			print(f'No model file found in "{directory}" ')
 			exit()
@@ -88,19 +100,21 @@ def SelectModel():
 			print(f'Invalid Path "{tmp}"')
 	else:
 		model=findmodels(path.dirname(argv[0]))
+	cls()
 	return model
 
 
 sysprom="you are helpful assistant called dan"
 model=SelectModel()
-system("clear")
+print(f'[ Loading model "{model}"...]')
 chat=Gpt(model_path=model,sysprompt=sysprom,n_ctx=8192,temprature=0.8,n_threads=8)
+cls()
 print(chat.timefmt()+"\n")
 
 while True:
 	question=input(ef.bold+"You: "+fg(187, 148, 239))
 	if question=="/clear":
-		system("clear")
+		cls()
 	elif question=="/exit":
 		prompt=input("\n\nWould you like to save the conversation to a file?: ")
 		if prompt=="y" or prompt=="yes":
