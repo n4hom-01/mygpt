@@ -6,7 +6,8 @@ from sys import argv
 from datetime import datetime
 import platform
 import argparse
-
+from time import sleep
+from ast import literal_eval
 help = """
 
 USAGE:
@@ -51,7 +52,6 @@ def cls():
 cls()
 class Gpt:
 	# some class variables
-	chrcnt = get_terminal_size(0)[0]
 	Histstr=""
 	#
 	def __init__(self,model_path,sysprompt,n_ctx=2048,max_tokens=500,temperature=0.8,verbose=False,**kwargs):
@@ -59,6 +59,10 @@ class Gpt:
 		self.llm = Llama(model_path=model_path,n_ctx=n_ctx,max_tokens=max_tokens,temperature=temperature,verbose=verbose,**kwargs)
 		self.conv=[{"role": "system", "content": sysprompt }]
 				
+	def width(self):
+		chrcnt = get_terminal_size(0)[0]
+		return chrcnt
+		
 	def ask(self,question,stream=True,**kwargs):
 		self.Histstr+=f"\nYou: {question}"
 		self.conv.append({"role": "user", "content": question})
@@ -67,7 +71,7 @@ class Gpt:
 			self.conv.pop(1)
 		response = self.llm.create_chat_completion(messages=self.conv,
 		stream=stream,**kwargs)
-		print(rs.all+"\n"+"‾"*self.chrcnt)
+		print(rs.all+"\n"+"‾"*self.width())
 		print(ef.bold+"[AI]: ",end="")
 		resp=""
 		if stream:
@@ -81,17 +85,17 @@ class Gpt:
 			#experimental may cause context overflow
 			self.conv.append({"role": "assistant", "content": resp[0:int(len(resp)/2)-1]})
 			#experimental may cause context overflow
-			print(rs.all+"\n"+"_"*self.chrcnt+"\n")
+			print(rs.all+"\n"+"_"*self.width()+"\n")
 		else:
 			output=response["choices"][0]["message"]["content"]
 			print(fg.yellow+f'{output}'+rs.all)
-			print("\n"+"="*self.chrcnt+"\n")
+			print("\n"+"="*self.width()+"\n")
 	
 	def timefmt(self):
 		now = datetime.now()
 		formatted_time = now.strftime("%B %d, %Y %H:%M:%S")
 		tfmt=f"--> Chat on {formatted_time} <--"
-		txt=("="*self.chrcnt+"\n"+f"{'-'*int((self.chrcnt-len(tfmt))/2)}{tfmt}{'-'*int((self.chrcnt-len(tfmt))/2)}"+"\n"+"="*self.chrcnt)
+		txt=("="*self.width()+"\n"+f"{'-'*int((self.width()-len(tfmt))/2)}{tfmt}{'-'*int((self.width()-len(tfmt))/2)}"+"\n"+"="*self.width())
 		return txt
 				
 	def save(self,filename=None):
@@ -108,6 +112,12 @@ class Gpt:
 		except Exception as e:
 			return ["Error",str(e)]
 		
+def auto_type(value):
+    try:
+        return literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
+
 def findmodels(modelpath):
 	ismdfl=path.isfile(modelpath);ismdir=path.isdir(modelpath)
 	if ismdfl and modelpath.endswith(".gguf"):
@@ -118,14 +128,26 @@ def findmodels(modelpath):
 			if len(mdlist)==1:
 				return mdlist[0]
 			else:
-				prom=input(f'Found models {mdlist} in "{modelpath}"\nEnter [1{"-"+str(len(mdlist)) if len(mdlist)>1 else ""}]: ')
-				return mdlist[int(prom)-1]
+				while True:
+					prompt=input(f'Found models {mdlist} in "{modelpath}"\nEnter [1{"-"+str(len(mdlist)) if len(mdlist)>1 else ""}]: ')
+					try:
+						a=int(prompt)
+						if a<=len(mdlist):
+							return path.join(modelpath,mdlist[int(prompt)-1])
+						else:
+							cls()
+							input(f"Invalid Number `{prompt}`: please Enter number 1-{len(mdlist)}\n\nPress Enter to continue....")
+							cls()
+					except:
+						cls()
+						input(f"Invalid Input `{prompt}`: please Enter number 1-{len(mdlist)}\n\nPress Enter to continue....")
+						cls()					
 		else:
 			print(f"No models found in {modelpath}")
+			exit()
 	else:
 		print(f"Error: Model `{modelpath}` doesnt exist or isn't a model file")
 		exit()
-
 
 def cmdargs():
 	parser = argparse.ArgumentParser(
@@ -134,55 +156,47 @@ def cmdargs():
 	    epilog=" kwargs example: --n_ctx 2040 --max_tokens 500",
 		formatter_class=argparse.RawDescriptionHelpFormatter
 	)
-	parser.add_argument(
-		'--model',"-m",
-		default=path.dirname(path.abspath(__file__)),
-		dest='model_path',
-		help='GGUF Model directory (default: current script location)\n'
-	)
-	parser.add_argument(
-		'--n_ctx',"-nctx",
-		dest='n_ctx',
-		default=500,
-		help='Context window size (default: 500)\n'
-	)
-	parser.add_argument(
-		'--temperature',"-temp",
-		dest='temperature',
-		default=0.8,
-		help='Temperature (default: 0.8)\n'
-	)
-	parser.add_argument(
-		'--n_thread',"-nth",
-		dest='n_thread',
-		default=cpu_count(),
-		help='Number of treads for faster computation (default: number of your cpu cores)\n'
-	)
-	parser.add_argument(
-		'--system-prompt',"-sysprom",
-		dest='sysprompt',
-		default="you are helpful assistant",
-		help='System Prompt (default: you are helpful assistant)\n'
-	)	
-	fixed_args, remaining = parser.parse_known_args()	
-	keyargs = {}
+	# Model configuration
+	parser.add_argument('-m', '--model', 
+                       default=path.dirname(path.abspath(__file__)),
+                       dest="model_path",
+                       type=findmodels,
+                       help="GGUF model file or directory containing models")
+    
+    # Standard parameters
+	parser.add_argument('--n_ctx','-ctx',dest="n_ctx",type=auto_type,default=500,
+                       help="Context window size in tokens")
+	parser.add_argument('--temperature','-t',dest="temperature",type=auto_type,default=0.8,
+                       help="Sampling temperature (0.0-2.0)")
+	parser.add_argument('--max_tokens','-mt',dest="max_tokens",type=auto_type,default=200,
+                       help="Max tokens to generate")
+	parser.add_argument('--n_thread','-nt',dest="n_thread",type=auto_type, default=cpu_count(),
+                       help="CPU threads for inference")
+	parser.add_argument('--system-prompt','-sp',dest="sysprompt",type=auto_type,default="You are a helpful assistant",
+                       help="System message for model behavior")
+	parser.add_argument('-v', '--verbose',dest="verbose", action='store_true',
+                       help="Enable verbose output")
+    
+	fixed_args, remaining = parser.parse_known_args()
+	keyargs= {}
 	it = iter(remaining)
 	for arg in it:
 	    if arg.startswith('--'):
-	        keyargs[arg[2:]] = next(it, None)
-	kwdict=vars(fixed_args)|keyargs
-	kwdict["model_path"]=findmodels(kwdict["model_path"])
-	return kwdict
+	        keyargs[arg[2:]] = auto_type(next(it, None))
+	return vars(fixed_args)|keyargs
 
+keyword_args=cmdargs()
 cls()
-kwargs=cmdargs()
-print(f'[ Loading model "{path.basename(kwargs["model_path"])}" ]')
-chat=Gpt(**kwargs)
+print(f'[---> Loading model "{path.basename(keyword_args["model_path"])}" <---]\n')
+chat=Gpt(**keyword_args)
+input("\n"+ef.bold+"Press enter to continue..."+ef.rs)
 cls()
 print(chat.timefmt()+"\n")
 # Main chat Loop
 while True:
 	message=input(ef.bold+"[You]: "+fg(187, 148, 239))
+	#special keywords that do different stuff and cannot be passed to the model	
+	#------------------------------------------------------------------------------------
 	if message=="/clear":
 		cls()
 	elif message=="/exit":
@@ -195,8 +209,8 @@ while True:
 		  	print(fg.rs+f'\n{ef.bold}[ Saved to "{svfl[1]}" ]')
 		print("[ Exiting Chat... ]")
 		exit()
-	elif "/save" in message:
-		print(rs.all+"\n"+"_"*chat.chrcnt+"\n")
+	elif message.strip().startswith("/save"):
+		print(rs.all+"\n"+"_"*chat.width()+"\n")
 		svpath=message.replace("/save","").strip()
 		svpath=svpath if svpath else f'{path.dirname(path.abspath(__file__))}/ChatHistory.txt'
 		if svpath and not svpath.isspace():
@@ -206,20 +220,24 @@ while True:
 				print(f"{ef.bold}[Sys:] Error: {savefile[1]}")
 		else:
 			print(fg.rs+f'{ef.bold}[Sys:] Saved to "{savefile[1]}"')
-		print(rs.all+"\n"+"‾"*chat.chrcnt)	
+		print(rs.all+"\n"+"‾"*chat.width())	
 	elif message=="/help":
-		print(rs.all+"\n"+"_"*chat.chrcnt+"\n")
+		print(rs.all+"\n"+"_"*chat.width()+"\n")
 		print(f"{ef.bold}[Sys:]{help}")
-		print(rs.all+"\n"+"_"*chat.chrcnt+"\n")
-	elif "/sysprompt" in message:
+		print(rs.all+"\n"+"_"*chat.width()+"\n")
+	elif message.strip().startswith("/sysprompt"):
 		prom=message.replace("/sysprompt","").strip()
-		print(rs.all+"\n"+"_"*chat.chrcnt+"\n")
+		print(rs.all+"\n"+"_"*chat.width()+"\n")
 		if prom:
 			chat.conv[0]["content"]=prom
 			print(f"{ef.bold}[Sys]: Changed system prompt to '{prom}'")
 		else:
 			print(f"{ef.bold}[Sys]: System prompt: '{chat.conv[0]['content']}'")
-		print(rs.all+"\n"+"_"*chat.chrcnt+"\n")
-		
+		print(rs.all+"\n"+"_"*chat.width()+"\n")
+	elif message=="/info":
+	    print(rs.all+"\n"+"_"*chat.width()+"\n")
+	    print(f"{ef.bold}[Sys]: info: {keyword_args}")
+	    print(rs.all+"\n"+"_"*chat.width()+"\n")
+	#--------------------------------------------------------------------------------------
 	else:
 		chat.ask(question=message,stream=True)
