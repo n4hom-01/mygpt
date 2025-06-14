@@ -1,105 +1,93 @@
-# Terminal Chatbot with LLaMA.cpp
+# MyGPT - Local LLM Terminal Chat Interface
 
-![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Model Format](https://img.shields.io/badge/model-GGUF-yellow)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-A simple yet powerful terminal-based chatbot powered by LLaMA.cpp Python bindings, featuring real-time streaming responses and convenient chat management.
+MyGPT is a simple yet powerful terminal-based chat interface for local LLM (Large Language Model) interactions using GGUF models with `llama.cpp` Python bindings.
 
 ## Features
 
-- 🚀 Real-time streaming responses (text appears as generated)
-- 🤖 Supports GGUF format LLaMA models
-- 🔍 Automatic GGUF model detection
-- 📝 Chat saving functionality
-- 🧹 Screen clearing command
-- 🎨 Colorful terminal interface
-- ⚙️ Interactive model selection
+- 🚀 Simple terminal interface for local LLM chats
+- 🔍 Automatic model detection in current directory
+- ⚡ Streamed responses for real-time interaction
+- 💾 Conversation history saving
+- 🛠️ Customizable parameters (context size, temperature, threads)
+- 📝 System prompt configuration
+- 📂 Supports both single model files and model directories
 
 ## Installation
 
-1. Ensure you have Python 3.8+ installed
-2. Install dependencies:
-```bash
-pip install llama-cpp-python sty
-```
-3. Place your GGUF model files in the script directory or specify path
+1. **Prerequisites**:
+   - Python 3.8 or higher
+   - `llama-cpp-python` package installed
+   - At least one GGUF model file
+
+2. **Install dependencies**:
+   ```bash
+   pip install llama-cpp-python sty
+   ```
+
+3. **Download a GGUF model** and place it in the same directory as the script or in a dedicated models directory.
 
 ## Usage
 
+### Basic Usage
 ```bash
-# Auto-detect GGUF models in current directory
 python mygpt.py
+```
+This will automatically detect compatible GGUF models in the current directory.
 
-# Specify model file or directory
-python mygpt.py -m /path/to/model.gguf
-python mygpt.py -m /path/to/models/
+### Advanced Usage
+```bash
+python mygpt.py --model /path/to/model.gguf --n_ctx 2048 --temperature 0.7 --n_thread 8
 ```
 
-## Interactive Commands
+### Runtime Arguments
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `-m`, `--model` | Path to model file or directory | Current directory |
+| `--n_ctx` | Context window size | 500 |
+| `--temperature` | Model temperature | 0.8 |
+| `--n_thread` | Number of CPU threads | CPU core count |
+| `--system-prompt` | Initial system prompt | "you are helpful assistant" |
 
-Once chat starts:
-- Just type to chat normally
-- Special commands:
-  - `/exit` - Exit (will prompt to save chat)
-  - `/save` - Save current conversation
-  - `/clear` - Clear the chat screen
-  - `/help` - Show available commands
+### Mid-Chat Commands
+| Command | Description |
+|---------|-------------|
+| `/save [filename]` | Save conversation to file |
+| `/exit` | Exit the program |
+| `/clear` | Clear the terminal |
+| `/help` | Show help message |
+| `/sysprompt [text]` | View or change system prompt |
 
 ## Example Session
+```
+================================================================================
+--> Chat on June 14, 2023 14:30:45 <--
+================================================================================
 
-```text
-$ python mygpt.py
-Found GGUF models:
-1. llama-2-7b-chat.Q4_K_M.gguf
-2. mistral-7b-instruct-v0.1.Q4_K_M.gguf
-Select model (1-2): 1
+[You]: Hello, how are you today?
 
-Initializing model... Done!
-
-You: hello
-AI: Hello there! How can I help you today?
-
-You: tell me a fun fact about space
-AI: *streams response gradually*
-Did you know that a day on Venus is longer than a year on Venus? 
-It takes Venus about 243 Earth days to rotate once on its axis, 
-but only about 225 Earth days to orbit the Sun!
-
-You: /save
-Chat saved to conversation_20230615.txt
-
-You: /exit
-Save conversation before exiting? [y/N]: y
-Chat saved. Goodbye!
+‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+[AI]: Hello! I'm just a computer program, so I don't have feelings, but I'm functioning perfectly and ready to assist you with anything you need. How can I help you today?
+________________________________________________________________________________
 ```
 
-## Chat Saving Format
+## Tips
 
-Saved conversations use this human-readable format:
-
-```
-=== Conversation 2023-06-15 14:30:22 ===
-Model: llama-2-7b-chat.Q4_K_M.gguf
-
-You: hello
-AI: Hello there! How can I help you today?
-
-You: tell me a fun fact about space
-AI: Did you know that a day on Venus is longer than...
-```
-
-## Requirements
-
-- Python 3.8+
-- `llama-cpp-python` (with GGUF support)
-- `sty` package
-- GGUF format model file(s)
+- For best performance, use models quantized to match your hardware capabilities
+- Adjust `n_ctx` based on your model's maximum context size
+- Higher temperature values (e.g., 0.8-1.2) make outputs more creative
+- Lower temperature values (e.g., 0.1-0.5) make outputs more focused and deterministic
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for any improvements.
 
 ---
 
-Enjoy natural conversations with your local LLM! The chatbot will stream responses in real-time just like human typing. All special commands work mid-conversation for full control over your chat experience.
+Enjoy your local AI chatting experience! 🤖💬
