@@ -229,7 +229,7 @@ while True:
 		prom=message.replace("/sysprompt","").strip()
 		print(rs.all+"\n"+"_"*chat.width()+"\n")
 		if prom:
-			chat.conv[0]["content"]=prom
+			chat.conv[0]["content"]=keyword_args["sysprompt"]=prom
 			print(f"{ef.bold}[Sys]: Changed system prompt to '{prom}'")
 		else:
 			print(f"{ef.bold}[Sys]: System prompt: '{chat.conv[0]['content']}'")
